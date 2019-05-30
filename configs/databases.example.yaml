@@ -1,0 +1,5 @@
+---
+# List of available database's name.
+name:
+  - DatabaseA
+  - DatabaseB
