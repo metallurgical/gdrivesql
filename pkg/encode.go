@@ -15,6 +15,7 @@ type FileSystem struct {
 	Path []string `yaml:a,omitempty`
 }
 
+// GetDatabases get all the databases from config yaml file
 func GetDatabases() *Database {
 	reader, err := os.Open("configs/databases.yaml")
 	if err != nil {

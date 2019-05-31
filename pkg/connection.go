@@ -7,6 +7,7 @@ type Connection struct {
 	Port string
 }
 
+// NewConnection get default connection name for mysql
 func NewConnection() *Connection {
 	return &Connection{
 		Host: "127.0.0.1",
