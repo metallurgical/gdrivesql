@@ -11,5 +11,8 @@ require (
 	github.com/pierrec/lz4 v2.0.5+incompatible // indirect
 	github.com/valyala/fasttemplate v1.0.1 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
+	golang.org/x/net v0.0.0-20190522155817-f3200d17e092
+	golang.org/x/oauth2 v0.0.0-20190523182746-aaccbc9213b0
+	google.golang.org/api v0.5.0
 	gopkg.in/yaml.v2 v2.2.2
 )

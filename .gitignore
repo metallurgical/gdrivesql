@@ -2,3 +2,5 @@ configs/databases.yaml
 configs/filesystems.yaml
 configs/gdrive.yaml
 .idea
+credentials.json
+token.json

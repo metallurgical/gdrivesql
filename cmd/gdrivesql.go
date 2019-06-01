@@ -45,9 +45,16 @@ func main() {
 	}
 	w.Wait()
 
+	w.Add(1)
+	go upload(&w)
+	w.Wait()
+
 	fmt.Print("Main program exit!")
 }
 
+// backup backup file to google drive. Filesystem and database
+// will put together under same folder and compressed. After compressed
+// all the archives will upload into google drive.
 func backup(items pkg.DriveItems, wg *sync.WaitGroup) {
 	log.Printf("Backup all items:  %v", items)
 	defer wg.Done()
@@ -72,19 +79,39 @@ func backup(items pkg.DriveItems, wg *sync.WaitGroup) {
 				ext := strings.Split(firstName[len(firstName)-1], ".")
 				switch ext[len(ext)-1] {
 				case "sql":
-					os.Rename(
-						fmt.Sprintf("./temp/%s", string(f.Name())),
-						fmt.Sprintf("%s/%s", pathDir, f.Name()),
-					)
+					if err := rename(pathDir, f); err != nil {
+						log.Printf("Cannot rename file path: %v", pathDir)
+					}
 				case "gz":
 					if items.FileSystem {
-						os.Rename(
-							fmt.Sprintf("./temp/%s", string(f.Name())),
-							fmt.Sprintf("%s/%s", pathDir, f.Name()),
-						)
+						if err := rename(pathDir, f); err != nil {
+							log.Printf("Cannot rename file path: %v", pathDir)
+						}
 					}
 				}
 			}
+		}
+	}
+
+	// Lastly compress all the final folder that
+	// need to upload
+	compress(pathDir)
+}
+
+func upload(wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	srv := (&pkg.GoogleDrive{}).New()
+	r, err := srv.Files.List().PageSize(20).Fields("nextPageToken, files(id, name)").Do()
+	if err != nil {
+		log.Fatalf("Unable to retrieve files: %v", err)
+	}
+	fmt.Println("Files:")
+	if len(r.Files) == 0 {
+		fmt.Println("No files found.")
+	} else {
+		for _, i := range r.Files {
+			fmt.Printf("%s (%s)\n", i.Name, i.Id)
 		}
 	}
 }
@@ -178,4 +205,13 @@ func contains(s []string, e string) bool {
 		}
 	}
 	return false
+}
+
+// rename rename existing file and replace with new path
+// same like move.
+func rename(path string, f os.FileInfo) error {
+	return os.Rename(
+		fmt.Sprintf("./temp/%s", string(f.Name())),
+		fmt.Sprintf("%s/%s", path, f.Name()),
+	)
 }
