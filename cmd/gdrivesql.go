@@ -4,9 +4,9 @@ import (
 	"github.com/metallurgical/gdrivesql/pkg"
 	"github.com/mholt/archiver"
 
+	"bytes"
 	"fmt"
 	"io/ioutil"
-	"bytes"
 	"log"
 	"os"
 	"os/exec"
@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	Timezone = "Asia/Kuala_Lumpur"
+	Timezone   = "Asia/Kuala_Lumpur"
 	DateFormat = "2006-01-02@03-04-05PM"
 )
 
@@ -34,7 +34,7 @@ func main() {
 	}
 	wg.Add(len(filesystems.Path))
 	for _, path := range filesystems.Path {
-		go compress(path, &wg)
+		go zipped(path, &wg)
 	}
 	wg.Wait()
 
@@ -50,17 +50,43 @@ func main() {
 
 func backup(items pkg.DriveItems, wg *sync.WaitGroup) {
 	log.Printf("Backup all items:  %v", items)
-	wg.Done()
+	defer wg.Done()
 
 	files, err := ioutil.ReadDir("./temp")
 	if err != nil {
 		log.Fatalf("Cannot read temp directory: ", err)
 	}
 
-	for _, f := range files {
-		log.Printf("File name is %s : ", f.Name())
+	pathDir := fmt.Sprintf("./temp/%s", string(items.Folder))
+	if !Exists(pathDir) {
+		if err := os.Mkdir(pathDir, 0755); err != nil {
+			log.Printf("Cant create directory: ", pathDir)
+		}
 	}
-	log.Print("huhu")
+
+	for _, f := range files {
+		firstName := strings.Split(f.Name(), "_")
+		//log.Printf("Firstname: %v. Items: %v", firstName[0], items.Files)
+		if contains(items.Files, firstName[0]) {
+			if !f.IsDir() {
+				ext := strings.Split(firstName[len(firstName)-1], ".")
+				switch ext[len(ext)-1] {
+				case "sql":
+					os.Rename(
+						fmt.Sprintf("./temp/%s", string(f.Name())),
+						fmt.Sprintf("%s/%s", pathDir, f.Name()),
+					)
+				case "gz":
+					if items.FileSystem {
+						os.Rename(
+							fmt.Sprintf("./temp/%s", string(f.Name())),
+							fmt.Sprintf("%s/%s", pathDir, f.Name()),
+						)
+					}
+				}
+			}
+		}
+	}
 }
 
 // dumping dump sql output from stdout into each of
@@ -107,10 +133,15 @@ func dumping(name string, c *pkg.Connection, wg *sync.WaitGroup) {
 	}
 }
 
-func compress(path string, wg *sync.WaitGroup) {
+// zipped compressed any filesystem
+func zipped(path string, wg *sync.WaitGroup) {
 	log.Printf("Compressing path:  %v", string(path))
 	defer wg.Done()
+	compress(path)
+}
 
+// compress archive the directory and file
+func compress(path string) string {
 	files := []string{path}
 	loc, err := time.LoadLocation(Timezone)
 	if err != nil {
@@ -119,11 +150,32 @@ func compress(path string, wg *sync.WaitGroup) {
 	currentDate := time.Now().In(loc).Format(DateFormat)
 
 	slicePath := strings.Split(string(path), "/")
-	tempFileName := slicePath[len(slicePath) - 1]
+	tempFileName := slicePath[len(slicePath)-1]
 	filename := fmt.Sprintf("./temp/%s_%s.tar.gz", tempFileName, currentDate)
 	// archive format is determined by file extension
 	err = archiver.Archive(files, filename)
 	if err != nil {
 		log.Fatal(err)
 	}
+	return filename
+}
+
+// Exists reports whether the named file or directory exists.
+func Exists(name string) bool {
+	if _, err := os.Stat(name); err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+	}
+	return true
+}
+
+// contains check string exist in slice
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
 }

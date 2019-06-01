@@ -16,7 +16,7 @@ type FileSystem struct {
 }
 
 type DriveItems struct {
-	Path string `yaml:path,omitempty`
+	Folder string `yaml:folder,omitempty`
 	FileSystem bool `yaml:filesystem,omitempty`
 	Files []string `yaml:files,omitempty`
 }
