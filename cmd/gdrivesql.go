@@ -3,6 +3,8 @@ package main
 import (
 	"github.com/metallurgical/gdrivesql/pkg"
 	"github.com/mholt/archiver"
+	"google.golang.org/api/drive/v3"
+	"net/http"
 
 	"bytes"
 	"fmt"
@@ -102,18 +104,24 @@ func upload(wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	srv := (&pkg.GoogleDrive{}).New()
-	r, err := srv.Files.List().PageSize(20).Fields("nextPageToken, files(id, name)").Do()
+	loc, err := time.LoadLocation(Timezone)
 	if err != nil {
-		log.Fatalf("Unable to retrieve files: %v", err)
+		log.Fatalf("Error loaded timezone: ", err)
 	}
-	fmt.Println("Files:")
-	if len(r.Files) == 0 {
-		fmt.Println("No files found.")
-	} else {
-		for _, i := range r.Files {
-			fmt.Printf("%s (%s)\n", i.Name, i.Id)
-		}
+	folderName := time.Now().In(loc).Format(DateFormat)
+	dir, err := createDir(srv, "", folderName)
+	if err != nil {
+		log.Println("Could not create dir: " + err.Error())
 	}
+
+	// Step 1. Open the file
+	f, err := os.Open("")
+	if err != nil {
+		panic(fmt.Sprintf("cannot open file: %v", err))
+	}
+	defer f.Close()
+
+	createFile(srv, f, dir.Id)
 }
 
 // dumping dump sql output from stdout into each of
@@ -214,4 +222,49 @@ func rename(path string, f os.FileInfo) error {
 		fmt.Sprintf("./temp/%s", string(f.Name())),
 		fmt.Sprintf("%s/%s", path, f.Name()),
 	)
+}
+
+// createDir create directory under particular Parent ID.
+func createDir(srv *drive.Service, parentId string, folderName string) (*drive.File, error) {
+	d := &drive.File{
+		Name:     folderName,
+		MimeType: "application/vnd.google-apps.folder",
+		Parents:  []string{parentId},
+	}
+	dir, err := srv.Files.Create(d).Do()
+	if err != nil {
+		log.Println("Could not create dir: " + err.Error())
+		return nil, err
+	}
+	return dir, nil
+}
+
+// createFile create file(upload) into google drive.
+func createFile(srv *drive.Service, fileToUpload *os.File, parentId string) (*drive.File, error) {
+	contentType, err := getFileContentType(fileToUpload)
+	f := &drive.File{
+		MimeType: contentType,
+		Name:     fileToUpload.Name(),
+		Parents:  []string{parentId},
+	}
+	file, err := srv.Files.Create(f).Media(fileToUpload).Do()
+	if err != nil {
+		log.Println("Could not create file: " + err.Error())
+		return nil, err
+	}
+	return file, nil
+}
+
+// getFileContentType Get file's mime type.
+func getFileContentType(out *os.File) (string, error) {
+	// Only the first 512 bytes are used to sniff the content type.
+	buffer := make([]byte, 512)
+	_, err := out.Read(buffer)
+	if err != nil {
+		return "", err
+	}
+	// Use the net/http package's handy DectectContentType function. Always returns a valid
+	// content-type by returning "application/octet-stream" if no others seemed to match.
+	contentType := http.DetectContentType(buffer)
+	return contentType, nil
 }
