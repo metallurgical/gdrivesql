@@ -4,6 +4,7 @@ require (
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/go-yaml/yaml v2.1.0+incompatible
 	github.com/golang/snappy v0.0.1 // indirect
+	github.com/h2non/filetype v1.0.8 // indirect
 	github.com/labstack/gommon v0.2.8
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/mholt/archiver v3.1.1+incompatible // indirect

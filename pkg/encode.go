@@ -19,6 +19,7 @@ type DriveItems struct {
 	Folder string `yaml:folder,omitempty`
 	FileSystem bool `yaml:filesystem,omitempty`
 	Files []string `yaml:files,omitempty`
+	DriveId string `yaml:driveid,omitempty`
 }
 
 type Gdrive struct {
