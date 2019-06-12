@@ -65,7 +65,7 @@ func main() {
 	go upload(&w)
 	w.Wait()
 
-	fmt.Print("Main program exit!")
+	fmt.Println("Main program exit!")
 }
 
 // backup backup file to google drive. Filesystem and database
@@ -118,6 +118,7 @@ func backup(items pkg.DriveItems, wg *sync.WaitGroup) {
 	})
 }
 
+// upload upload file into google drive.
 func upload(wg *sync.WaitGroup) {
 	//fmt.Print(tempGdriveHolder.container)
 	defer wg.Done()

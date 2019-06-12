@@ -4,3 +4,5 @@ configs/gdrive.yaml
 .idea
 credentials.json
 token.json
+cleanup
+gdrivesql
