@@ -6,3 +6,4 @@ credentials.json
 token.json
 cleanup
 gdrivesql
+gdriveauth

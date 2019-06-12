@@ -72,7 +72,6 @@ func main() {
 // will put together under same folder and compressed. After compressed
 // all the archives will upload into google drive.
 func backup(items pkg.DriveItems, wg *sync.WaitGroup) {
-	log.Printf("Backup all items:  %v", items)
 	defer wg.Done()
 
 	files, err := ioutil.ReadDir("./temp")
