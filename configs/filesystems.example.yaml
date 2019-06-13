@@ -1,0 +1,4 @@
+---
+# List of available filesystem path's name.
+path: # Absolute path to filesystem that need to be archive
+  - "/Users/metallurgical/projects/automate" # "/path/to/the/folder/to/archive"

@@ -1,5 +1,5 @@
 ---
 # List of available database's name.
-name:
+name: # Database's name that will be exported into .sql format
   - DatabaseA
   - DatabaseB

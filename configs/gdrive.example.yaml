@@ -1,0 +1,10 @@
+---
+# List of available database's name.
+config:
+  - folder: "automate" # Folder name to create inside temp folder to store backup files
+    filesystem: true # Set to true to backup and upload along with
+    driveid: "Google Drive ID" # Backup archive will be stored under this google drive's folder
+    files: # Archived and database name that will stored under "automate" folder. E.g: automate.tar.gz and dbname.sql
+      - "automate" # Filesystem: this name must be matched with folder defined inside filesystem.yaml(if exist)
+      - "DatabaseA" # Database name defined inside database.yaml
+      - "DatabaseB" # Database name defined inside database.yaml
