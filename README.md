@@ -40,3 +40,50 @@ Use `gdrivesql` executable file to create a backup file and upload into google d
 Check google drive's folder for uploaded files
 
 ![7](https://i.imgur.com/hL6Eetr.gif)
+
+
+## Configurations
+This module provide 3 config files:
+
+- **Database config** : List of database's name to export into .sql
+- **Filesystem config** : List of absolute filesystem's(project) path that need to archive to backup into google drive
+- **Google drive config** : Defined which filesystem and databases files(from above config) that able to upload into google drive
+
+### Database Config
+```yaml
+---
+# List of available database's name.
+name: # Database's name that will be exported into .sql format
+  - DatabaseA
+  - DatabaseB
+```
+
+From the above config, this module will export `DatabaseA.sql` and `DatabaseB.sql` into `temp` folder.
+
+### Filesystem Config
+```yaml
+---
+# List of filesystem path's name.
+path: # Absolute path to filesystem that need to be archive
+  - "/Users/metallurgical/projects/automate" # "/path/to/the/folder/to/archive"
+```
+
+From the above config, this module will compress and create `automate.tar.gz` into `temp` folder.
+
+### Google Drive Config
+```yaml
+---
+# List of available database's name.
+config:
+  - folder: "automate" # Folder name to create inside temp folder to store backup files
+    filesystem: true # Set to true to backup and upload along with
+    driveid: "Google Drive ID" # Backup archive will be stored under this google drive's folder
+    files: # Archived and database name that will stored under "automate" folder. E.g: automate.tar.gz and dbname.sql
+      - "automate" # Filesystem: this name must be matched with folder defined inside filesystem.yaml(if exist)
+      - "DatabaseA" # Database name defined inside database.yaml
+      - "DatabaseB" # Database name defined inside database.yaml
+```
+
+From the above config, this module will move file `automate.tar.gz`, `DatabaseA.sql`, `DatabaseB.sql` into `automate`(depend on `folder` option) folder and finally compress those folder into `automate.tar.gz`. 
+
+`gdrivesql` module will upload `automate.tar.gz` into google drive's folder(depend on `driveid` option) with the name `backup.tar.gz`. 
