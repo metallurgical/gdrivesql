@@ -87,3 +87,27 @@ config:
 From the above config, this module will move file `automate.tar.gz`, `DatabaseA.sql`, `DatabaseB.sql` into `automate`(depend on `folder` option) folder and finally compress those folder into `automate.tar.gz`. 
 
 `gdrivesql` module will upload `automate.tar.gz` into google drive's folder(depend on `driveid` option) with the name `backup.tar.gz`. 
+
+## Installation & Usage
+Make sure you install golang in your server. Clone this repository somewhere. Head over into cloned repository and run below command to build:
+
+Build `gdriveauth` to get `token.json`. **This command must be execute first before able to upload into google drive(required to run one time only)**
+
+```
+$ go build cmd/gdriveauth/gdriveauth.go
+$ ./gdriveauth
+```
+
+Build `gdrivesql` to do start backup filesystem and database
+
+```
+$ go build cmd/gdrivesql/gdrivesql.go
+$ ./gdrivesql
+```
+
+Build `cleanup` to remove all leftovers files inside `temp` folder
+
+```
+$ go build cmd/cleanup/cleanup.go
+$ ./cleanup
+```
