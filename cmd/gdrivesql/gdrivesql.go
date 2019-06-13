@@ -88,7 +88,6 @@ func backup(items pkg.DriveItems, wg *sync.WaitGroup) {
 
 	for _, f := range files {
 		firstName := strings.Split(f.Name(), "_")
-		//log.Printf("Firstname: %v. Items: %v", firstName[0], items.Files)
 		if contains(items.Files, firstName[0]) {
 			if !f.IsDir() {
 				ext := strings.Split(firstName[len(firstName)-1], ".")
@@ -119,7 +118,6 @@ func backup(items pkg.DriveItems, wg *sync.WaitGroup) {
 
 // upload upload file into google drive.
 func upload(wg *sync.WaitGroup) {
-	//fmt.Print(tempGdriveHolder.container)
 	defer wg.Done()
 
 	srv := (&pkg.GoogleDrive{}).New()
@@ -168,7 +166,6 @@ func dumping(name string, c *pkg.Connection, wg *sync.WaitGroup) {
 		log.Fatalf("Error to execute mysqlump command: ", err)
 		os.Exit(1)
 	}
-	//fmt.Printf("%q\n", out.String()) // to log the real error
 
 	if err := cmd.Start(); err != nil {
 		log.Fatal(err)
