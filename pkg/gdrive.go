@@ -101,3 +101,34 @@ func (gd *GoogleDrive) SaveToken(path string, token *oauth2.Token) {
 	defer f.Close()
 	json.NewEncoder(f).Encode(token)
 }
+
+// createDir create directory under particular
+// Parent ID inside google drive.
+func CreateDir(srv *drive.Service, parentId string, folderName string) (*drive.File, error) {
+	d := &drive.File{
+		Name:     folderName,
+		MimeType: "application/vnd.google-apps.folder",
+		Parents:  []string{parentId},
+	}
+	dir, err := srv.Files.Create(d).Do()
+	if err != nil {
+		log.Println("Could not create dir: " + err.Error())
+		return nil, err
+	}
+	return dir, nil
+}
+
+// createFile create file(upload) into google drive.
+func CreateFile(srv *drive.Service, name string, fileToUpload *os.File, parentId string) (*drive.File, error) {
+	f := &drive.File{
+		MimeType: "application/tar+gzip",
+		Name:     name,
+		Parents:  []string{parentId},
+	}
+	file, err := srv.Files.Create(f).Media(fileToUpload).Do()
+	if err != nil {
+		log.Println("Could not create file: " + err.Error())
+		return nil, err
+	}
+	return file, nil
+}

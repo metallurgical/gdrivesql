@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/metallurgical/gdrivesql/pkg"
 	"github.com/mholt/archiver"
-	"google.golang.org/api/drive/v3"
 
 	"bytes"
 	"fmt"
@@ -17,8 +16,10 @@ import (
 )
 
 const (
-	Timezone   = "Asia/Kuala_Lumpur"
-	DateFormat = "2006-01-02@03-04-05PM"
+	Timezone            = "Asia/Kuala_Lumpur"
+	DateFormat          = "2006-01-02@03-04-05PM"
+	TempDir             = "./temp"
+	FinalBackupFileName = "backup.tar.gz"
 )
 
 type (
@@ -34,37 +35,87 @@ type (
 	}
 )
 
-var tempGdriveHolder gdriveHolder
+var (
+	tempGdriveHolder gdriveHolder
+	flagDb, flagFile = true, true
+	dbConfig []pkg.Connection
+)
 
 func main() {
-	databases := pkg.GetDatabases()
-	filesystems := pkg.GetFileSystems()
-	gdrive := pkg.GetGdrive()
-	dbConfig := pkg.NewConnection()
+	// Checking existence  of databases.yaml, filesystems.yaml and gdrive.yaml
+    // If all these files not exist, main process should abort the
+    // execution.
 
-	var wg sync.WaitGroup
-	// How many goroutines need to be waited
-	wg.Add(len(databases.Name))
-	for _, name := range databases.Name {
-		go dumping(name, dbConfig, &wg)
+    // Marshaling databases.yaml
+	databases, err := pkg.GetDatabases()
+	if err != nil {
+		log.Printf("%v, skip database backup. \n", err.Error())
+		flagDb = false
+	} else {
+		if len(databases.Databases) == 0 {
+			log.Println("Database's not defined. Skip database backup.")
+			flagDb = false
+		}
 	}
-	wg.Add(len(filesystems.Path))
-	for _, path := range filesystems.Path {
-		go zipped(path, &wg)
-	}
-	wg.Wait()
 
-	var w sync.WaitGroup
-	w.Add(len(gdrive.Config))
+	// Marshalling filesystems.yaml
+	filesystems, err := pkg.GetFileSystems()
+	if err != nil {
+		log.Printf("%v, skip filesystem backup. \n", err.Error())
+		flagFile = false
+	} else {
+		if len(filesystems.Path) == 0 {
+			log.Println("Filesystem's path not defined. Skip filesystem backup.")
+			flagFile = false
+		}
+	}
+
+	if !flagFile && !flagDb {
+		log.Println("Both filesystems.yaml and databases.yaml does not exit. Nothing to backup. Abort process! \n")
+		os.Exit(1)
+	}
+
+	// Marshalling gdrive.yaml
+	gdrive, err := pkg.GetGdrive()
+	if err != nil {
+		log.Printf("%v, abort process! \n", err.Error())
+		os.Exit(1)
+	}
+
+	dbConfig = databases.Connections
+
+	var wgBase, wgBackup sync.WaitGroup // Use waitGroup to wait all goroutines
+
+	if flagDb {
+		wgBase.Add(len(databases.Databases))
+		for _, config := range databases.Databases {
+			//for _, db := range config.config {
+				go dumping(config, &wgBase) // Dumping database
+			//}
+		}
+	}
+
+	if flagFile {
+		wgBase.Add(len(filesystems.Path))
+		for _, path := range filesystems.Path {
+			go zipped(path, &wgBase) // Compressing filesystem
+		}
+	}
+
+	// Invoke if either one(databases and filesystem) exist
+	wgBase.Wait()
+	wgBackup.Add(len(gdrive.Config))
+
 	for _, config := range gdrive.Config {
-		go backup(config, &w)
+		go backup(config, &wgBackup) // Compressing uploaded filesystem
 	}
-	w.Wait()
 
-	w.Add(1)
-	go upload(&w)
-	w.Wait()
+	wgBackup.Wait()
+	wgBackup.Add(1) // Adding one since only 1 left
 
+	go upload(&wgBackup) // Do backup into gDrive
+
+	wgBackup.Wait()
 	fmt.Println("Main program exit!")
 }
 
@@ -74,13 +125,13 @@ func main() {
 func backup(items pkg.DriveItems, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	files, err := ioutil.ReadDir("./temp")
+	files, err := ioutil.ReadDir(TempDir)
 	if err != nil {
 		log.Fatalf("Cannot read temp directory: ", err)
 	}
 
-	pathDir := fmt.Sprintf("./temp/%s", string(items.Folder))
-	if !Exists(pathDir) {
+	pathDir := fmt.Sprintf("%s/%s", TempDir, string(items.Folder))
+	if !pkg.Exists(pathDir) {
 		if err := os.Mkdir(pathDir, 0755); err != nil {
 			log.Printf("Cant create directory: ", pathDir)
 		}
@@ -88,17 +139,17 @@ func backup(items pkg.DriveItems, wg *sync.WaitGroup) {
 
 	for _, f := range files {
 		firstName := strings.Split(f.Name(), "_")
-		if contains(items.Files, firstName[0]) {
+		if pkg.Contains(items.Files, firstName[0]) {
 			if !f.IsDir() {
 				ext := strings.Split(firstName[len(firstName)-1], ".")
 				switch ext[len(ext)-1] {
 				case "sql":
-					if err := rename(pathDir, f); err != nil {
+					if err := pkg.Rename(pathDir, f); err != nil {
 						log.Printf("Cannot rename file path: %v", pathDir)
 					}
 				case "gz":
 					if items.FileSystem {
-						if err := rename(pathDir, f); err != nil {
+						if err := pkg.Rename(pathDir, f); err != nil {
 							log.Printf("Cannot rename file path: %v", pathDir)
 						}
 					}
@@ -129,12 +180,12 @@ func upload(wg *sync.WaitGroup) {
 	folderName := time.Now().In(loc).Format(DateFormat)
 
 	for _, gdrive := range tempGdriveHolder.container {
-		dir, err := createDir(srv, gdrive.googleDriveId, folderName)
+		dir, err := pkg.CreateDir(srv, gdrive.googleDriveId, folderName)
 		if err != nil {
 			log.Println("Could not create dir: " + err.Error())
 		}
 		// Step 1. Open the file
-		f, err := os.Open(fmt.Sprintf("./temp/%s", gdrive.archiveFileName))
+		f, err := os.Open(fmt.Sprintf("%s/%s", TempDir, gdrive.archiveFileName))
 		if err != nil {
 			panic(fmt.Sprintf("cannot open file: %v", err))
 		}
@@ -142,51 +193,90 @@ func upload(wg *sync.WaitGroup) {
 
 		// User backup.tar.gz instead of gdrive.archiveFileName
 		// to avoid confusion
-		createFile(srv, "backup.tar.gz", f, dir.Id)
+		pkg.CreateFile(srv, FinalBackupFileName, f, dir.Id)
 	}
 }
 
 // dumping dump sql output from stdout into each of
 // database's file name with .sql
-func dumping(name string, c *pkg.Connection, wg *sync.WaitGroup) {
+func dumping(config pkg.Config, wg *sync.WaitGroup) {
 	defer wg.Done()
-	args := []string{
-		fmt.Sprintf("--port=%s", c.Port),
-		fmt.Sprintf("--host=%s", c.Host),
-		fmt.Sprintf("--user=%s", c.User),
-		fmt.Sprintf("--password=%s", ""),
-	}
-	args = append(args, name)
-	log.Printf("exec mysqldump with %v", args)
-	cmd := exec.Command("mysqldump", args...)
-	stdout, err := cmd.StdoutPipe()
-	var out bytes.Buffer
-	cmd.Stderr = &out
-	if err != nil {
-		log.Fatalf("Error to execute mysqlump command: ", err)
-		os.Exit(1)
-	}
 
-	if err := cmd.Start(); err != nil {
-		log.Fatal(err)
+	for _, db := range config.List {
+
+		var name = db
+
+		cmd, args := dumpDriver(name, config.Connection)
+		log.Printf("exec command with %v", args)
+
+		stdout, err := cmd.StdoutPipe()
+		var out bytes.Buffer
+		cmd.Stderr = &out
+		if err != nil {
+			log.Fatalf("Error to execute mysqlump command: ", err)
+			os.Exit(1)
+		}
+
+		if err := cmd.Start(); err != nil {
+			log.Fatal(err)
+		}
+		bytes, err := ioutil.ReadAll(stdout)
+		if err != nil {
+			log.Fatalf("Read error: ", err)
+		}
+		if err := cmd.Wait(); err != nil {
+			log.Fatal(err)
+		}
+		loc, err := time.LoadLocation(Timezone)
+		if err != nil {
+			log.Fatalf("Error loaded timezone: ", err)
+		}
+		currentDate := time.Now().In(loc).Format(DateFormat)
+		filename := fmt.Sprintf("%s/%s_%s.sql", TempDir, name, currentDate)
+		err = ioutil.WriteFile(filename, bytes, 0777)
+		if err != nil {
+			log.Fatalf("Cannot write to file: ", err)
+		}
 	}
-	bytes, err := ioutil.ReadAll(stdout)
-	if err != nil {
-		log.Fatalf("Read error: ", err)
+}
+
+// dumpDriver decide which `sql` command that need
+// to execute. Either mysql or postgresSQL.
+func dumpDriver(dbName string, connectionName string) (*exec.Cmd, []string) {
+	var args []string
+	var cmd *exec.Cmd
+
+	for _, c := range dbConfig {
+
+		if connectionName == c.Name {
+			log.Println("CONNECTION NAME: %s - %s", connectionName, c.Driver)
+			// Mysql configurations
+			if  c.Driver == "mysql" {
+				args = []string{
+					fmt.Sprintf("--port=%s", c.Port),
+					fmt.Sprintf("--host=%s", c.Host),
+					fmt.Sprintf("--user=%s", c.User),
+					fmt.Sprintf("--password=%s", c.Password),
+				}
+				args = append(args, dbName)
+
+				cmd = exec.Command("mysqldump", args...)
+
+			} else if c.Driver == "postgres" { // PostgresSQL configurations
+				args = []string{
+					fmt.Sprintf("--port=%s", c.Port),
+					fmt.Sprintf("--host=%s", c.Host),
+					fmt.Sprintf("--username=%s", c.User),
+					//fmt.Sprintf("--password=%s", c.Password),
+					fmt.Sprintf("--dbname=%s", dbName),
+				}
+
+				cmd = exec.Command("pg_dump", args...)
+				//cmd = exec.Command(fmt.Sprintf("pg_dump --dbname=postgresql://%s:%s@%s:%s/%s", c.User, c.Password, c.Host, c.Port, dbName))
+			}
+		}
 	}
-	if err := cmd.Wait(); err != nil {
-		log.Fatal(err)
-	}
-	loc, err := time.LoadLocation(Timezone)
-	if err != nil {
-		log.Fatalf("Error loaded timezone: ", err)
-	}
-	currentDate := time.Now().In(loc).Format(DateFormat)
-	filename := fmt.Sprintf("./temp/%s_%s.sql", name, currentDate)
-	err = ioutil.WriteFile(filename, bytes, 0777)
-	if err != nil {
-		log.Fatalf("Cannot write to file: ", err)
-	}
+	return cmd, args
 }
 
 // zipped compressed any filesystem
@@ -208,71 +298,11 @@ func compress(path string) string {
 	slicePath := strings.Split(string(path), "/")
 	tempFileName := slicePath[len(slicePath)-1]
 	filenameWithoutPath := fmt.Sprintf("%s_%s.tar.gz", tempFileName, currentDate)
-	filename := fmt.Sprintf("./temp/%s", filenameWithoutPath)
+	filename := fmt.Sprintf("%s/%s", TempDir, filenameWithoutPath)
 	// archive format is determined by file extension
 	err = archiver.Archive(files, filename)
 	if err != nil {
 		log.Fatal(err)
 	}
 	return filenameWithoutPath
-}
-
-// Exists reports whether the named file or directory exists.
-func Exists(name string) bool {
-	if _, err := os.Stat(name); err != nil {
-		if os.IsNotExist(err) {
-			return false
-		}
-	}
-	return true
-}
-
-// contains check string exist in slice
-func contains(s []string, e string) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
-}
-
-// rename rename existing file and replace with new path
-// same like move.
-func rename(path string, f os.FileInfo) error {
-	return os.Rename(
-		fmt.Sprintf("./temp/%s", string(f.Name())),
-		fmt.Sprintf("%s/%s", path, f.Name()),
-	)
-}
-
-// createDir create directory under particular
-// Parent ID inside google drive.
-func createDir(srv *drive.Service, parentId string, folderName string) (*drive.File, error) {
-	d := &drive.File{
-		Name:     folderName,
-		MimeType: "application/vnd.google-apps.folder",
-		Parents:  []string{parentId},
-	}
-	dir, err := srv.Files.Create(d).Do()
-	if err != nil {
-		log.Println("Could not create dir: " + err.Error())
-		return nil, err
-	}
-	return dir, nil
-}
-
-// createFile create file(upload) into google drive.
-func createFile(srv *drive.Service, name string, fileToUpload *os.File, parentId string) (*drive.File, error) {
-	f := &drive.File{
-		MimeType: "application/tar+gzip",
-		Name:     name,
-		Parents:  []string{parentId},
-	}
-	file, err := srv.Files.Create(f).Media(fileToUpload).Do()
-	if err != nil {
-		log.Println("Could not create file: " + err.Error())
-		return nil, err
-	}
-	return file, nil
 }
