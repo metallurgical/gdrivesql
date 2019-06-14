@@ -3,6 +3,8 @@
 
 Since this package using `Google Drive` as a place to store backups files, its required few steps for authorization for the first time. For the subsequent execution, authorization no longer needed.
 
+Until now, only `MYSQL` and `postgreSQL` are supported. For the backup, it doesn't has to backup both databases and filesystems at the same time. You may choose either one or both.
+
 ## Demo
 View demo below to get the whole picture and overview how things works.
 
@@ -52,13 +54,54 @@ This module provide 3 config files:
 ### Database Config
 ```yaml
 ---
-# List of available database's name.
-name: # Database's name that will be exported into .sql format
-  - DatabaseA
-  - DatabaseB
+# List of connection's name
+connections:
+  - name: "connection_a"
+    driver: "mysql"
+    host: "127.0.0.1"
+    port: "3306"
+    user: "root"
+    password:
+
+  - name: "connection_b"
+    driver: "mysql"
+    host: "external_ip_address"
+    port: "3306"
+    user: "root"
+    password: "root@1234"
+
+  - name: "connection_c"
+    driver: "postgres"
+    host: "127.0.0.1"
+    port: "5432"
+    user: "postgres"
+    password:
+       
+
+# List of available database's name that need to export.
+databases:
+  - connection: connection_a # Will use `connection_a`
+    list:
+      - DatabaseA
+      - DatabaseB
+
+  - connection: connection_c # will use `connection_c`
+    list:
+      - DatabaseC
 ```
 
-From the above config, this module will export `DatabaseA.sql` and `DatabaseB.sql` into `temp` folder.
+From the above config, this module will export `DatabaseA.sql`, `DatabaseB.sql` and `DatabaseC.sql` into `temp` folder. 
+
+** Notes for **postgreSQL**, you may need to create `.pgpass` file under home directory. On windows the file is named `%APPDATA%\postgresql\pgpass.conf` while on linux/unix should be `~/.pgpass`. 
+
+This file should contain lines of the following format:
+
+```
+hostname:port:database:username:password
+```
+
+On Unix systems, the permissions on a password file must disallow any access to world or group; achieve this by a command such as `chmod 0600 ~/.pgpass`. If the permissions are less strict than this, the file will be ignored. On Microsoft Windows, it is assumed that the file is stored in a directory that is secure, so no special permissions check is made.
+
 
 ### Filesystem Config
 ```yaml

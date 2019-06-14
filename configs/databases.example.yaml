@@ -1,5 +1,34 @@
 ---
+# List of connection's name
+connections:
+  - name: "connection_a"
+    driver: "mysql"
+    host: "127.0.0.1"
+    port: "3306"
+    user: "root"
+    password:
+
+  - name: "connection_b"
+    driver: "mysql"
+    host: "external_ip_address"
+    port: "3306"
+    user: "root"
+    password: "root@1234"
+
+  - name: "connection_c"
+    driver: "postgres"
+    host: "127.0.0.1"
+    port: "5432"
+    user: "postgres"
+    password:
+
 # List of available database's name.
-name: # Database's name that will be exported into .sql format
-  - DatabaseA
-  - DatabaseB
+databases:
+  - connection: connection_a
+    list:
+      - celeng
+      - aquamy
+
+  - connection: connection_c
+    list:
+      - ptg_kedah
