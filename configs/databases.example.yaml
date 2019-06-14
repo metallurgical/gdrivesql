@@ -26,9 +26,9 @@ connections:
 databases:
   - connection: connection_a
     list:
-      - celeng
-      - aquamy
+      - DatabaseA
+      - DatabaseB
 
   - connection: connection_c
     list:
-      - ptg_kedah
+      - DatabaseC
