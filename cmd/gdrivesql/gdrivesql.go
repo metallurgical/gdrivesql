@@ -38,15 +38,15 @@ type (
 var (
 	tempGdriveHolder gdriveHolder
 	flagDb, flagFile = true, true
-	dbConfig []pkg.Connection
+	dbConfig         []pkg.Connection
 )
 
 func main() {
 	// Checking existence  of databases.yaml, filesystems.yaml and gdrive.yaml
-    // If all these files not exist, main process should abort the
-    // execution.
+	// If all these files not exist, main process should abort the
+	// execution.
 
-    // Marshaling databases.yaml
+	// Marshaling databases.yaml
 	databases, err := pkg.GetDatabases()
 	if err != nil {
 		log.Printf("%v, skip database backup. \n", err.Error())
@@ -90,7 +90,7 @@ func main() {
 		wgBase.Add(len(databases.Databases))
 		for _, config := range databases.Databases {
 			//for _, db := range config.config {
-				go dumping(config, &wgBase) // Dumping database
+			go dumping(config, &wgBase) // Dumping database
 			//}
 		}
 	}
@@ -251,7 +251,7 @@ func dumpDriver(dbName string, connectionName string) (*exec.Cmd, []string) {
 		if connectionName == c.Name {
 			log.Println("CONNECTION NAME: %s - %s", connectionName, c.Driver)
 			// Mysql configurations
-			if  c.Driver == "mysql" {
+			if c.Driver == "mysql" {
 				args = []string{
 					fmt.Sprintf("--port=%s", c.Port),
 					fmt.Sprintf("--host=%s", c.Host),
