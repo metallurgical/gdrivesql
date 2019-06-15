@@ -5,6 +5,7 @@ import (
 	"github.com/mholt/archiver"
 
 	"bytes"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -39,15 +40,24 @@ var (
 	tempGdriveHolder gdriveHolder
 	flagDb, flagFile = true, true
 	dbConfig         []pkg.Connection
+	confPath         = ""
 )
+
+func init() {
+	flag.StringVar(&confPath, "c", confPath, "Set custom absolute config folder path that store configs files")
+	flag.Parse()
+}
 
 func main() {
 	// Checking existence  of databases.yaml, filesystems.yaml and gdrive.yaml
 	// If all these files not exist, main process should abort the
 	// execution.
+	setting := pkg.New()
+	setting.ConfigPath = confPath
+	setting.ConstructPath()
 
 	// Marshaling databases.yaml
-	databases, err := pkg.GetDatabases()
+	databases, err := setting.GetDatabases()
 	if err != nil {
 		log.Printf("%v, skip database backup. \n", err.Error())
 		flagDb = false
@@ -59,7 +69,7 @@ func main() {
 	}
 
 	// Marshalling filesystems.yaml
-	filesystems, err := pkg.GetFileSystems()
+	filesystems, err := setting.GetFileSystems()
 	if err != nil {
 		log.Printf("%v, skip filesystem backup. \n", err.Error())
 		flagFile = false
@@ -76,7 +86,7 @@ func main() {
 	}
 
 	// Marshalling gdrive.yaml
-	gdrive, err := pkg.GetGdrive()
+	gdrive, err := setting.GetGdrive()
 	if err != nil {
 		log.Printf("%v, abort process! \n", err.Error())
 		os.Exit(1)
