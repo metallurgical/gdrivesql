@@ -37,15 +37,18 @@ type (
 )
 
 var (
-	tempGdriveHolder   gdriveHolder
-	flagDb, flagFile   = true, true
-	dbConfig           []pkg.Connection
-	tempPath, confPath string
+	tempGdriveHolder                       gdriveHolder
+	flagDb, flagFile                       = true, true
+	dbConfig                               []pkg.Connection
+	tempPath, confPath, credentialsDir string
 )
 
 func init() {
-	flag.StringVar(&confPath, "c", "configs", "Set custom absolute config folder path that store configs files")
+	// ** Notes: Compulsory to specify all these if executables files
+	// runs outside of gdrivesql directory.
+	flag.StringVar(&confPath, "conf", "configs", "Set custom absolute config folder path that store configs files")
 	flag.StringVar(&tempPath, "t", TempDir, "Set custom absolute temp folder path that store compressed and exported files")
+	flag.StringVar(&credentialsDir, "c", "credentials", "Set custom absolute credentials folder path that store credentials.json and token.json")
 	flag.Parse()
 }
 
@@ -158,12 +161,12 @@ func backup(items pkg.DriveItems, wg *sync.WaitGroup) {
 				ext := strings.Split(firstName[len(firstName)-1], ".")
 				switch ext[len(ext)-1] {
 				case "sql":
-					if err := pkg.Rename(pathDir, f); err != nil {
+					if err := pkg.Rename(tempPath, pathDir, f); err != nil {
 						log.Printf("Cannot rename file path: %v", pathDir)
 					}
 				case "gz":
 					if items.FileSystem {
-						if err := pkg.Rename(pathDir, f); err != nil {
+						if err := pkg.Rename(tempPath, pathDir, f); err != nil {
 							log.Printf("Cannot rename file path: %v", pathDir)
 						}
 					}
@@ -185,7 +188,10 @@ func backup(items pkg.DriveItems, wg *sync.WaitGroup) {
 func upload(wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	srv := (&pkg.GoogleDrive{}).New()
+	var gd = &pkg.GoogleDrive{
+		CredentialDirPath: credentialsDir,
+	}
+	srv := gd.New()
 	loc, err := time.LoadLocation(Timezone)
 	if err != nil {
 		log.Fatalf("Error loaded timezone: ", err)
@@ -320,3 +326,5 @@ func compress(path string) string {
 	}
 	return filenameWithoutPath
 }
+
+

@@ -27,9 +27,9 @@ func Contains(s []string, e string) bool {
 
 // Rename rename existing file and replace with new path
 // same like move.
-func Rename(path string, f os.FileInfo) error {
+func Rename(oldPath string, path string, f os.FileInfo) error {
 	return os.Rename(
-		fmt.Sprintf("./temp/%s", string(f.Name())),
+		fmt.Sprintf("%s/%s", oldPath, string(f.Name())),
 		fmt.Sprintf("%s/%s", path, f.Name()),
 	)
 }

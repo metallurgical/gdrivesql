@@ -16,17 +16,17 @@ import (
 
 type GoogleDrive struct {
 	drive.Service
+	CredentialDirPath  string
 }
 
-//type Gdrive interface {
-//	GetClient(config *oauth2.Config) *http.Client
-//	GetTokenFromWeb(config *oauth2.Config) *oauth2.Token
-//	TokenFromFile(file string) (*oauth2.Token, error)
-//	SaveToken(path string, token *oauth2.Token)
-//}
-
+// New initialize services.
 func (gd *GoogleDrive) New() *drive.Service{
-	b, err := ioutil.ReadFile("credentials.json")
+	var credentialsDirPath = "credentials"
+
+	if gd.CredentialDirPath != "" {
+		credentialsDirPath = gd.CredentialDirPath
+	}
+	b, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", credentialsDirPath, "credentials.json"))
 	if err != nil {
 		log.Fatalf("Unable to read client secret file: %v", err)
 	}
@@ -37,7 +37,9 @@ func (gd *GoogleDrive) New() *drive.Service{
 		log.Fatalf("Unable to parse client secret file to config: %v", err)
 	}
 
-	var gdriveClient = &GoogleDrive{}
+	var gdriveClient = &GoogleDrive{
+		CredentialDirPath: credentialsDirPath,
+	}
 	client := gdriveClient.GetClient(config)
 
 	srv, err := drive.New(client)
@@ -52,7 +54,12 @@ func (gd *GoogleDrive) GetClient(config *oauth2.Config) *http.Client {
 	// The file token.json stores the user's access and refresh tokens, and is
 	// created automatically when the authorization flow completes for the first
 	// time.
-	tokFile := "token.json"
+	var credentialsDirPath = "credentials"
+
+	if gd.CredentialDirPath != "" {
+		credentialsDirPath = gd.CredentialDirPath
+	}
+	tokFile := fmt.Sprintf("%s/%s", credentialsDirPath, "token.json")
 	tok, err := gd.TokenFromFile(tokFile)
 	if err != nil {
 		tok = gd.GetTokenFromWeb(config)
