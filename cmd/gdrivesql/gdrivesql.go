@@ -37,14 +37,15 @@ type (
 )
 
 var (
-	tempGdriveHolder gdriveHolder
-	flagDb, flagFile = true, true
-	dbConfig         []pkg.Connection
-	confPath         = ""
+	tempGdriveHolder   gdriveHolder
+	flagDb, flagFile   = true, true
+	dbConfig           []pkg.Connection
+	tempPath, confPath string
 )
 
 func init() {
-	flag.StringVar(&confPath, "c", confPath, "Set custom absolute config folder path that store configs files")
+	flag.StringVar(&confPath, "c", "configs", "Set custom absolute config folder path that store configs files")
+	flag.StringVar(&tempPath, "t", TempDir, "Set custom absolute temp folder path that store compressed and exported files")
 	flag.Parse()
 }
 
@@ -56,6 +57,9 @@ func main() {
 	setting.ConfigPath = confPath
 	setting.ConstructPath()
 
+	if tempPath == "" {
+		tempPath = TempDir
+	}
 	// Marshaling databases.yaml
 	databases, err := setting.GetDatabases()
 	if err != nil {
@@ -135,12 +139,12 @@ func main() {
 func backup(items pkg.DriveItems, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	files, err := ioutil.ReadDir(TempDir)
+	files, err := ioutil.ReadDir(tempPath)
 	if err != nil {
 		log.Fatalf("Cannot read temp directory: ", err)
 	}
 
-	pathDir := fmt.Sprintf("%s/%s", TempDir, string(items.Folder))
+	pathDir := fmt.Sprintf("%s/%s", tempPath, string(items.Folder))
 	if !pkg.Exists(pathDir) {
 		if err := os.Mkdir(pathDir, 0755); err != nil {
 			log.Printf("Cant create directory: ", pathDir)
@@ -195,7 +199,7 @@ func upload(wg *sync.WaitGroup) {
 			log.Println("Could not create dir: " + err.Error())
 		}
 		// Step 1. Open the file
-		f, err := os.Open(fmt.Sprintf("%s/%s", TempDir, gdrive.archiveFileName))
+		f, err := os.Open(fmt.Sprintf("%s/%s", tempPath, gdrive.archiveFileName))
 		if err != nil {
 			panic(fmt.Sprintf("cannot open file: %v", err))
 		}
@@ -242,7 +246,7 @@ func dumping(config pkg.Config, wg *sync.WaitGroup) {
 			log.Fatalf("Error loaded timezone: ", err)
 		}
 		currentDate := time.Now().In(loc).Format(DateFormat)
-		filename := fmt.Sprintf("%s/%s_%s.sql", TempDir, name, currentDate)
+		filename := fmt.Sprintf("%s/%s_%s.sql", tempPath, name, currentDate)
 		err = ioutil.WriteFile(filename, bytes, 0777)
 		if err != nil {
 			log.Fatalf("Cannot write to file: ", err)
@@ -308,7 +312,7 @@ func compress(path string) string {
 	slicePath := strings.Split(string(path), "/")
 	tempFileName := slicePath[len(slicePath)-1]
 	filenameWithoutPath := fmt.Sprintf("%s_%s.tar.gz", tempFileName, currentDate)
-	filename := fmt.Sprintf("%s/%s", TempDir, filenameWithoutPath)
+	filename := fmt.Sprintf("%s/%s", tempPath, filenameWithoutPath)
 	// archive format is determined by file extension
 	err = archiver.Archive(files, filename)
 	if err != nil {
