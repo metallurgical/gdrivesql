@@ -152,9 +152,86 @@ $ go build cmd/gdrivesql/gdrivesql.go
 $ ./gdrivesql
 ```
 
-Build `cleanup` to remove all leftovers files inside `temp` folder
+Build `gdriveclean` to remove all leftovers files inside `temp` folder
 
 ```
-$ go build cmd/cleanup/cleanup.go
-$ ./cleanup
+$ go build cmd/gdriveclean/gdriveclean.go
+$ ./gdriveclean
 ```
+
+## Available Options
+
+### `gdriveauth`
+
+- **Credentials folder path:** Provide option `-c` to set custom credentials path that holds files `credentials.json` and `token.json`
+
+Note: This option is compulsory if run the command outside of `gdrivesql` root folder. After run this command, script will store `token.json` into specified path.
+
+**E.g:**
+
+```
+$ gdriveauth -c path/to/credentials/folder
+```
+
+### `gdrivesql`
+
+- **Configs folder path :** Provide option `-conf` to set custom configs folder path that holds files `databases.yaml`, `gdrive.yaml` and `filesystems.yaml`
+- **Temp folder path :** Provide option `-t` to set custom temporary folder path that holds compressed file
+- **Credentials folder path:** Provide option `-c` to set custom credentials path that holds files `credentials.json` and `token.json`. Script will looks the file `token.json` inside this folder to execute gdrive api thingy
+
+Note: This option is compulsory if run the command outside of `gdrivesql` root folder. 
+
+**E.g:**
+
+```
+$ gdrivesql -conf path/to/folder/configs -t path/to/folder/temp -c path/to/folder/credentials
+```
+
+### `gdriveclean`
+
+- **Temp folder path:** Provide option `-t` to set custom temporary folder path that holds compressed file. Script will looks into this folder and remove generated files
+
+Note: This option is compulsory if run the command outside of `gdrivesql` root folder.
+
+**E.g:**
+
+```
+$ gdriveclean -t path/to/folder/temp
+```
+
+## Empowering the scripts with crontab
+You may simplified tedious tasks automatically by run this scripts using `crontab` instead of execute manually in CLI. 
+
+Example usage with `crotab`
+
+```
+File : /etc/crontab
+
+# Backrup script: upload into google drive
+# Run script every 5th, 12th, 19th and 26th of a month at midnight
+00 00 5,12,19,26 * * root gdrivesql -conf /path/to/gdrivesql/configs -t /path/to/gdrivesql/temp -c /path/to/gdrivesql/credentials > /path/to/gdrivesql/dummy.log 2>&1
+
+# Cleanup script: delete all unused(generetad) files inside temp folder
+# Run script every 6th, 13th, 20th and 27th of a month at midnight
+00 00 6,13,20,27 * * root cd /path/to/gdrivesql/temp && find . ! -name .gitignore -delete
+```
+
+## Importants Notice
+
+Copy executable code into bin folder to make it global access:
+
+```
+# gdrivesql
+$ cp /path/to/gdrivesql/gdrivesql-linux-386 /usr/local/bin/gdrivesql # linux 386
+$ cp /path/to/gdrivesql/gdrivesql-386 /usr/local/bin/gdrivesql # apple darwin
+
+# gdriveauth
+$ cp /path/to/gdrivesql/gdriveauth-linux-386 /usr/local/bin/gdriveauth # linux 386
+$ cp /path/to/gdrivesql/gdriveauth-386 /usr/local/bin/gdriveauth # apple darwin
+
+# gdriveclean
+$ cp /path/to/gdrivesql/gdriveclean-linux-386 /usr/local/bin/gdriveclean # linux 386
+$ cp /path/to/gdrivesql/gdriveclean-386 /usr/local/bin/gdriveclean # apple darwin
+
+```
+This module assume the script will executed inside `gdrivesql` root directory, then no need to specify the option for `credentials`, `configs` and `temp` path. If run outside `gdrivesql` root directory(copy over executable files into `/usr/local/bin`), you may need to pass in the options mentioned above. Example of run outside could be if you like to automate call the scripts from `crontab`
