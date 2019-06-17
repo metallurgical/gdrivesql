@@ -213,6 +213,10 @@ File : /etc/crontab
 
 # Cleanup script: delete all unused(generetad) files inside temp folder
 # Run script every 6th, 13th, 20th and 27th of a month at midnight
+00 00 6,13,20,27 * * root gdriveclean -t /path/to/gdrivesql/temp
+
+# OR
+
 00 00 6,13,20,27 * * root cd /path/to/gdrivesql/temp && find . ! -name .gitignore -delete
 ```
 
