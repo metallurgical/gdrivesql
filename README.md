@@ -196,7 +196,7 @@ $ gdriveauth -c path/to/credentials/folder
 - **Credentials folder path:** Provide option `-c` to set custom credentials path that holds files `credentials.json` and `token.json`. Script will looks the file `token.json` inside this folder to execute gdrive api thingy
 - **Send email :** Sending an email to notify owner after successfully backup files into google drive. Provide option `-m` with value `1` to enable mail notification.
 
-Note: This option is compulsory if run the command outside of `gdrivesql` root folder. 
+Note: This option is compulsory if run the command outside of `gdrivesql` root folder except `send email` option which is optional. 
 
 **E.g:**
 
