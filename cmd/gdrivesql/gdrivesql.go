@@ -64,7 +64,9 @@ func main() {
 		tempPath = TempDir
 	}
 	// Marshaling databases.yaml
-	databases, err := setting.GetDatabases()
+	conf, err := setting.GetConfig(pkg.Database{})
+	databases := conf.(pkg.Database)
+	//databases, err := setting.GetDatabases()
 	if err != nil {
 		log.Printf("%v, skip database backup. \n", err.Error())
 		flagDb = false
@@ -76,7 +78,8 @@ func main() {
 	}
 
 	// Marshalling filesystems.yaml
-	filesystems, err := setting.GetFileSystems()
+	conf, err = setting.GetConfig(pkg.FileSystem{})
+	filesystems := conf.(pkg.FileSystem)
 	if err != nil {
 		log.Printf("%v, skip filesystem backup. \n", err.Error())
 		flagFile = false
@@ -93,7 +96,8 @@ func main() {
 	}
 
 	// Marshalling gdrive.yaml
-	gdrive, err := setting.GetGdrive()
+	conf, err = setting.GetConfig(pkg.Gdrive{})
+	gdrive := conf.(pkg.Gdrive)
 	if err != nil {
 		log.Printf("%v, abort process! \n", err.Error())
 		os.Exit(1)

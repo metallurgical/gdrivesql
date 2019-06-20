@@ -1,0 +1,7 @@
+---
+# Mail configurations
+host: "smtp.mailtrap.io"
+port: "2525"
+username: "username"
+password: "password"
+encryption:

@@ -1,13 +1,13 @@
 package pkg
 
 import (
-	"fmt"
-	"github.com/go-yaml/yaml"
-	"github.com/labstack/gommon/log"
-
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
+
+	"github.com/go-yaml/yaml"
+	"github.com/labstack/gommon/log"
 )
 
 var (
@@ -15,11 +15,11 @@ var (
 	gdriveConfigFileName     = "gdrive.yaml"
 	databaseConfigFileName   = "databases.yaml"
 	filesystemConfigFileName = "filesystems.yaml"
+	mailPathConfigFileName   = "mail.yaml"
 	gdrivePath               = fmt.Sprintf("%s%s%s", basePath, string(os.PathSeparator), gdriveConfigFileName)
 	databasePath             = fmt.Sprintf("%s%s%s", basePath, string(os.PathSeparator), databaseConfigFileName)
 	filesystemPath           = fmt.Sprintf("%s%s%s", basePath, string(os.PathSeparator), filesystemConfigFileName)
-	//databasePath   = "configs/databases.yaml"
-	//filesystemPath = "configs/filesystems.yaml"
+	mailPath                 = fmt.Sprintf("%s%s%s", basePath, string(os.PathSeparator), mailPathConfigFileName)
 )
 
 type (
@@ -49,6 +49,8 @@ type (
 		Path []string `yaml:path,omitempty`
 	}
 
+	// Google drive information that need
+	// to store into google drive.
 	DriveItems struct {
 		Folder     string   `yaml:folder,omitempty`
 		FileSystem bool     `yaml:filesystem,omitempty`
@@ -60,9 +62,21 @@ type (
 		Config []DriveItems
 	}
 
+	// Define all configurations path.
 	Settings struct {
-		GdrivePath, DatabasePath, FilesystemPath string
-		ConfigPath                               string
+		GdrivePath     string
+		DatabasePath   string
+		FilesystemPath string
+		ConfigPath     string
+		MailPath       string
+	}
+
+	Mail struct {
+		Host       string `yaml:host,omitempty`
+		Port       string `yaml:port,omitempty`
+		Username   string `yaml:username,omitempty`
+		Password   string `yaml:password,omitempty`
+		Encryption string `yaml:encryption,omitempty`
 	}
 )
 
@@ -73,9 +87,12 @@ func New() *Settings {
 		GdrivePath:     gdrivePath,
 		DatabasePath:   databasePath,
 		FilesystemPath: filesystemPath,
+		MailPath:       mailPath,
 	}
 }
 
+// ConstructPath replace user defined path for
+// all existing configurations path
 func (s *Settings) ConstructPath() {
 	if s.ConfigPath != "" {
 		s.FilesystemPath = fmt.Sprintf("%s%s%s", s.ConfigPath, string(os.PathSeparator), filesystemConfigFileName)
@@ -84,64 +101,93 @@ func (s *Settings) ConstructPath() {
 	}
 }
 
-// GetGdrive get gdrive config to upload into Google Drive
-func (s *Settings) GetGdrive() (*Gdrive, error) {
-	if !Exists(s.GdrivePath) {
-		return nil, errors.New("File gdrive.yaml does not exist")
-	}
-	reader, err := os.Open(s.GdrivePath)
-	if err != nil {
-		log.Fatalf("Can't open configs/gdrive.yaml", err)
-	}
-	buf, err := ioutil.ReadAll(reader)
-	if err != nil {
-		log.Fatalf("Can't read configs/gdrive.yaml", err)
-	}
-	defer reader.Close()
-
-	var gdrive Gdrive
-	yaml.Unmarshal(buf, &gdrive)
-	return &gdrive, nil
+// Configurations defined method should implement
+// by configuration files.
+type Configurations interface {
+	GetConfig([]byte, *os.File) Configurations
+	GetPath(s *Settings) string
 }
 
-// GetDatabases get all the databases's name to export into .sql
-func (s *Settings) GetDatabases() (*Database, error) {
-	if !Exists(s.DatabasePath) {
-		return nil, errors.New("File databases.yaml does not exist")
-	}
-	reader, err := os.Open(s.DatabasePath)
-	if err != nil {
-		log.Fatalf("Can't open configs/databases.yaml", err)
-	}
-	buf, err := ioutil.ReadAll(reader)
-	if err != nil {
-		log.Fatalf("Can't read configs/databases.yaml", err)
-	}
-	defer reader.Close()
-
-	var databases Database
-	yaml.Unmarshal(buf, &databases)
-
-	return &databases, nil
+// GetPath get the mail configuration file path.
+func (c Mail) GetPath(s *Settings) string {
+	return s.MailPath
 }
 
-// GetFileSystems get all filesystem's list to compress
-func (s *Settings) GetFileSystems() (*FileSystem, error) {
-	if !Exists(s.FilesystemPath) {
-		return nil, errors.New("File filesystems.yaml does not exist")
+// GetConfig get the marshalling config of Mail configuration.
+func (c Mail) GetConfig(buf []byte, reader *os.File) Configurations {
+	defer reader.Close()
+	var conf Mail
+	yaml.Unmarshal(buf, &conf)
+	return conf
+}
+
+// GetPath get the database configuration file path.
+func (c Database) GetPath(s *Settings) string {
+	return s.DatabasePath
+}
+
+// GetConfig get the marshalling config of Database configuration.
+func (c Database) GetConfig(buf []byte, reader *os.File) Configurations {
+	defer reader.Close()
+	var conf Database
+	yaml.Unmarshal(buf, &conf)
+	return conf
+}
+
+// GetPath get the filesystem configuration file path.
+func (c FileSystem) GetPath(s *Settings) string {
+	return s.FilesystemPath
+}
+
+// GetConfig get the marshalling config of Filesystem configuration.
+func (c FileSystem) GetConfig(buf []byte, reader *os.File) Configurations {
+	defer reader.Close()
+	var conf FileSystem
+	yaml.Unmarshal(buf, &conf)
+	return conf
+}
+
+// GetPath get the gdrive configuration file path.
+func (c Gdrive) GetPath(s *Settings) string {
+	return s.GdrivePath
+}
+
+// GetConfig get the marshalling config of Gdrive configuration.
+func (c Gdrive) GetConfig(buf []byte, reader *os.File) Configurations {
+	defer reader.Close()
+	var conf Gdrive
+	yaml.Unmarshal(buf, &conf)
+	return conf
+}
+
+// GetConfig react as layer to get implemented configurations.
+func (s *Settings) GetConfig(c Configurations) (Configurations, error) {
+	if _, err := s.isFileExist(c); err != nil {
+		return nil, err
 	}
-	reader, err := os.Open(s.FilesystemPath)
+	buf, reader := s.readFile(c.GetPath(s))
+
+	return c.GetConfig(buf, reader), nil
+}
+
+// isFileExist check the configuration files is exist.
+func (s *Settings) isFileExist(c Configurations) (bool, error) {
+	if !Exists(c.GetPath(s)) {
+		return false, errors.New(fmt.Sprintf("File %v does not exist", c.GetPath(s)))
+	}
+	return true, nil
+}
+
+// readFile open file and return underlying bytes.
+func (s *Settings) readFile(path string) ([]byte, *os.File) {
+	reader, err := os.Open(path)
 	if err != nil {
-		log.Fatalf("Can't open configs/filesystems.yaml", err)
+		log.Fatalf(fmt.Sprintf("Can't open %v", err))
 	}
 	buf, err := ioutil.ReadAll(reader)
 	if err != nil {
-		log.Fatalf("Can't read configs/filesystems.yaml", err)
+		log.Fatalf(fmt.Sprintf("Can't read %v", err))
 	}
-	defer reader.Close()
 
-	var filesystems FileSystem
-	yaml.Unmarshal(buf, &filesystems)
-
-	return &filesystems, nil
+	return buf, reader
 }

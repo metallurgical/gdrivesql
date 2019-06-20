@@ -1,6 +1,7 @@
 configs/databases.yaml
 configs/filesystems.yaml
 configs/gdrive.yaml
+configs/mail.yaml
 .idea
 credentials.json
 token.json
