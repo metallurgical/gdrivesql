@@ -37,9 +37,10 @@ type (
 )
 
 var (
-	tempGdriveHolder                       gdriveHolder
-	flagDb, flagFile                       = true, true
-	dbConfig                               []pkg.Connection
+	tempGdriveHolder                   gdriveHolder
+	flagDb, flagFile                   = true, true
+	flagMail                           = true
+	dbConfig                           []pkg.Connection
 	tempPath, confPath, credentialsDir string
 )
 
@@ -49,6 +50,7 @@ func init() {
 	flag.StringVar(&confPath, "conf", "configs", "Set custom absolute config folder path that store configs files")
 	flag.StringVar(&tempPath, "t", TempDir, "Set custom absolute temp folder path that store compressed and exported files")
 	flag.StringVar(&credentialsDir, "c", "credentials", "Set custom absolute credentials folder path that store credentials.json and token.json")
+	flag.BoolVar(&flagMail, "m", false, "Send downloadable link into email for every success of backup into google drive")
 	flag.Parse()
 }
 
@@ -134,7 +136,16 @@ func main() {
 	wgBackup.Wait()
 	wgBackup.Add(1) // Adding one since only 1 left
 
-	go upload(&wgBackup) // Do backup into gDrive
+	var mail pkg.Mail
+	if flagMail {
+		conf, err = setting.GetConfig(pkg.Mail{})
+		mail = conf.(pkg.Mail)
+		if err != nil {
+			log.Printf("%v, skip sending email. \n", err.Error())
+			flagMail = false
+		}
+	}
+	go upload(&wgBackup, &mail) // Do backup into gDrive
 
 	wgBackup.Wait()
 	fmt.Println("Main program exit!")
@@ -189,7 +200,7 @@ func backup(items pkg.DriveItems, wg *sync.WaitGroup) {
 }
 
 // upload upload file into google drive.
-func upload(wg *sync.WaitGroup) {
+func upload(wg *sync.WaitGroup, mail *pkg.Mail) {
 	defer wg.Done()
 
 	var gd = &pkg.GoogleDrive{
@@ -217,7 +228,13 @@ func upload(wg *sync.WaitGroup) {
 
 		// User backup.tar.gz instead of gdrive.archiveFileName
 		// to avoid confusion
-		pkg.CreateFile(srv, FinalBackupFileName, f, dir.Id)
+		file, err := pkg.CreateFile(srv, FinalBackupFileName, f, dir.Id)
+		// only sending email if -m option set to true
+		if flagMail {
+			if err == nil {
+				pkg.SendMail(mail, file)
+			}
+		}
 	}
 }
 
@@ -330,5 +347,3 @@ func compress(path string) string {
 	}
 	return filenameWithoutPath
 }
-
-

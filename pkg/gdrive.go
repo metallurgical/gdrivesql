@@ -4,23 +4,23 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
-	"log"
 
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
-	"google.golang.org/api/drive/v3"
 	"golang.org/x/oauth2/google"
+	"google.golang.org/api/drive/v3"
 )
 
 type GoogleDrive struct {
 	drive.Service
-	CredentialDirPath  string
+	CredentialDirPath string
 }
 
 // New initialize services.
-func (gd *GoogleDrive) New() *drive.Service{
+func (gd *GoogleDrive) New() *drive.Service {
 	var credentialsDirPath = "credentials"
 
 	if gd.CredentialDirPath != "" {
@@ -32,7 +32,7 @@ func (gd *GoogleDrive) New() *drive.Service{
 	}
 
 	// If modifying these scopes, delete your previously saved token.json.
-	config, err := google.ConfigFromJSON(b, drive.DriveMetadataReadonlyScope, drive.DriveScope, drive.DriveFileScope)
+	config, err := google.ConfigFromJSON(b, drive.DriveMetadataReadonlyScope, drive.DriveScope, drive.DriveFileScope, drive.DriveReadonlyScope)
 	if err != nil {
 		log.Fatalf("Unable to parse client secret file to config: %v", err)
 	}
@@ -128,13 +128,21 @@ func CreateDir(srv *drive.Service, parentId string, folderName string) (*drive.F
 // createFile create file(upload) into google drive.
 func CreateFile(srv *drive.Service, name string, fileToUpload *os.File, parentId string) (*drive.File, error) {
 	f := &drive.File{
-		MimeType: "application/tar+gzip",
-		Name:     name,
-		Parents:  []string{parentId},
+		MimeType:                     "application/tar+gzip",
+		Name:                         name,
+		Parents:                      []string{parentId},
+		CopyRequiresWriterPermission: true,
+		WritersCanShare:              true,
 	}
 	file, err := srv.Files.Create(f).Media(fileToUpload).Do()
 	if err != nil {
 		log.Println("Could not create file: " + err.Error())
+		return nil, err
+	}
+	// Get downloadable link to open in browser
+	file, err = srv.Files.Get(file.Id).Fields("id,description,webViewLink,webContentLink,properties,parents").Do()
+	if err != nil {
+		log.Println("Could not get file: " + err.Error())
 		return nil, err
 	}
 	return file, nil

@@ -1,5 +1,7 @@
 ---
 # Mail configurations
+from: "from@example.com"
+to: "to@example.com"
 host: "smtp.mailtrap.io"
 port: "2525"
 username: "username"

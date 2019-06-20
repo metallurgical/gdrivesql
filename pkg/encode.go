@@ -72,6 +72,8 @@ type (
 	}
 
 	Mail struct {
+		From       string `yaml:from,omitempty`
+		To         string `yaml:to,omitempty`
 		Host       string `yaml:host,omitempty`
 		Port       string `yaml:port,omitempty`
 		Username   string `yaml:username,omitempty`

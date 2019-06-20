@@ -50,6 +50,7 @@ This module provide 3 config files:
 - **Database config** : List of database's name to export into .sql
 - **Filesystem config** : List of absolute filesystem's(project) path that need to archive to backup into google drive
 - **Google drive config** : Defined which filesystem and databases files(from above config) that able to upload into google drive
+- **Mail config** : Defined email credentials to send mail notification after successful backup into google drive
 
 ### Database Config
 ```yaml
@@ -131,6 +132,21 @@ From the above config, this module will move file `automate.tar.gz`, `DatabaseA.
 
 `gdrivesql` module will upload `automate.tar.gz` into google drive's folder(depend on `driveid` option) with the name `backup.tar.gz`. 
 
+### Mail Config
+```yaml
+---
+# Mail configurations
+from: "from@example.com"
+to: "to@example.com"
+host: "smtp.mailtrap.io"
+port: "2525"
+username: "username"
+password: "password"
+encryption:
+```
+
+Simple as it is, script will sending notification mail after successfull upload into google drive along with `Download Link` and `Parent Folder`'s link. To enable this option, provide option `-m 1` to `gdrivesql` command. See `gdrivesql` section for more details.
+
 ## Installation & Usage
 Make sure you install golang in your server. Clone this repository somewhere. Head over into cloned repository and run below command to build:
 
@@ -178,13 +194,14 @@ $ gdriveauth -c path/to/credentials/folder
 - **Configs folder path :** Provide option `-conf` to set custom configs folder path that holds files `databases.yaml`, `gdrive.yaml` and `filesystems.yaml`
 - **Temp folder path :** Provide option `-t` to set custom temporary folder path that holds compressed file
 - **Credentials folder path:** Provide option `-c` to set custom credentials path that holds files `credentials.json` and `token.json`. Script will looks the file `token.json` inside this folder to execute gdrive api thingy
+- **Send email :** Sending an email to notify owner after successfully backup files into google drive. Provide option `-m` with value `1` to enable mail notification.
 
 Note: This option is compulsory if run the command outside of `gdrivesql` root folder. 
 
 **E.g:**
 
 ```
-$ gdrivesql -conf path/to/folder/configs -t path/to/folder/temp -c path/to/folder/credentials
+$ gdrivesql -conf path/to/folder/configs -t path/to/folder/temp -c path/to/folder/credentials -m 1
 ```
 
 ### `gdriveclean`

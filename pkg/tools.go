@@ -2,7 +2,11 @@ package pkg
 
 import (
 	"fmt"
+	"net/smtp"
 	"os"
+	"strings"
+
+	"google.golang.org/api/drive/v3"
 )
 
 // Exists reports whether the named file or directory exists.
@@ -32,4 +36,34 @@ func Rename(oldPath string, path string, f os.FileInfo) error {
 		fmt.Sprintf("%s/%s", oldPath, string(f.Name())),
 		fmt.Sprintf("%s/%s", path, f.Name()),
 	)
+}
+
+// SendMail send mail notification along with
+// file's information.
+func SendMail(mail *Mail, f *drive.File) error {
+	from := mail.From
+	pass := mail.Password
+	to := mail.To
+
+	msg := fmt.Sprintf(
+		"From: %s \n"+"To: %s \n"+"Subject: [%s]:%s \n\n"+"%s %v %v",
+		from,
+		to,
+		"AUTOMATE SCRIPTS",
+		"Automation Backup From Server",
+		"This is to inform you that the backup process has successfully done. \n\n" +
+		"Download Link: ",
+		f.WebViewLink,
+		"\nFolder: https://drive.google.com/drive/folders/" + strings.Join(f.Parents, ""),
+	)
+
+	err := smtp.SendMail(fmt.Sprintf("%s:%s", mail.Host, mail.Port),
+		smtp.PlainAuth("", mail.Username, pass, mail.Host),
+		from, []string{to}, []byte(msg))
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
