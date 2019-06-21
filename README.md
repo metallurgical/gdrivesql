@@ -9,7 +9,9 @@ Until now, only `MYSQL` and `postgreSQL` are supported. For the backup, it doesn
 View demo below to get the whole picture and overview how things works.
 
 ### Get Client Credentials
-Getting client credentials and placed directly(credentials.json) into root folder of `gdrivesql`. Head over to [Google Drive Api Quickstart](https://developers.google.com/drive/api/v3/quickstart/go) to get client credential file.
+Getting client credentials and placed directly(credentials.json) into `credentials` folder of `gdrivesql`. You may defined your own folder to store credentials. Look section `gdriveauth`, `gdrivesql` for more details how to configure.
+
+Head over to [Google Drive Api Quickstart](https://developers.google.com/drive/api/v3/quickstart/go) to get client credential file.
 
 ![1](https://i.imgur.com/pT3SOzY.gif)
 
@@ -24,7 +26,9 @@ Get authorization key
 ![3](https://i.imgur.com/fcmbAkb.gif)
 
 ### Paste Authorization Key
-Paste authorization key back to terminal. This time, file `token.json` automatically created for you and placed under root directory
+Paste authorization key back to terminal. This time, file `token.json` automatically created for you and placed under `credentials` directory
+
+If you provide custom `credentials` folder path, script will automatically store inside path provided instead of the default path
 
 ![4](https://i.imgur.com/BuKDvAb.gif)
 
