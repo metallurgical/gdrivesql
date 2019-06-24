@@ -27,17 +27,17 @@ type (
 	// later able to pick which connection can be used
 	// to export .database
 	Connection struct {
-		Name     string `yaml:name,omitempty`
-		Driver   string `yaml:driver,omitempty`
-		Host     string `yaml:host,omitempty`
-		Port     string `yaml:port,omitempty`
-		User     string `yaml:user,omitempty`
-		Password string `yaml:password,omitempty`
+		Name     string `yaml:"name,omitempty"`
+		Driver   string `yaml:"driver,omitempty"`
+		Host     string `yaml:"host,omitempty"`
+		Port     string `yaml:"port,omitempty"`
+		User     string `yaml:"user,omitempty"`
+		Password string `yaml:"password,omitempty"`
 	}
 
 	Config struct {
-		Connection string   `yaml:connection,omitempty`
-		List       []string `yaml:list,omitempty`
+		Connection string   `yaml:"connection,omitempty"`
+		List       []string `yaml:"list,omitempty"`
 	}
 
 	Database struct {
@@ -46,16 +46,16 @@ type (
 	}
 
 	FileSystem struct {
-		Path []string `yaml:path,omitempty`
+		Path []string `yaml:"path,omitempty"`
 	}
 
 	// Google drive information that need
 	// to store into google drive.
 	DriveItems struct {
-		Folder     string   `yaml:folder,omitempty`
-		FileSystem bool     `yaml:filesystem,omitempty`
-		Files      []string `yaml:files,omitempty`
-		DriveId    string   `yaml:driveid,omitempty`
+		Folder     string   `yaml:"folder,omitempty"`
+		FileSystem bool     `yaml:"filesystem,omitempty"`
+		Files      []string `yaml:"files,omitempty"`
+		DriveId    string   `yaml:"driveid,omitempty"`
 	}
 
 	Gdrive struct {
@@ -72,13 +72,13 @@ type (
 	}
 
 	Mail struct {
-		From       string `yaml:from,omitempty`
-		To         string `yaml:to,omitempty`
-		Host       string `yaml:host,omitempty`
-		Port       string `yaml:port,omitempty`
-		Username   string `yaml:username,omitempty`
-		Password   string `yaml:password,omitempty`
-		Encryption string `yaml:encryption,omitempty`
+		From       string `yaml:"from,omitempty"`
+		To         string `yaml:"to,omitempty"`
+		Host       string `yaml:"host,omitempty"`
+		Port       string `yaml:"port,omitempty"`
+		Username   string `yaml:"username,omitempty"`
+		Password   string `yaml:"password,omitempty"`
+		Encryption string `yaml:"encryption,omitempty"`
 	}
 )
 
