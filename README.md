@@ -259,4 +259,4 @@ $ cp /path/to/gdrivesql/gdriveclean-linux-386 /usr/local/bin/gdriveclean # linux
 $ cp /path/to/gdrivesql/gdriveclean-386 /usr/local/bin/gdriveclean # apple darwin
 
 ```
-This module assume the script will executed inside `gdrivesql` root directory, then no need to specify the option for `credentials`, `configs` and `temp` path. If run outside `gdrivesql` root directory(copy over executable files into `/usr/local/bin`), you may need to pass in the options mentioned above. Example of run outside could be if you like to automate call the scripts from `crontab`
+This module assume the script will executed inside `gdrivesql` root directory, then no need to specify the option for `credentials`, `configs` and `temp` path. If run outside `gdrivesql` root directory(copy over executable files into `/usr/local/bin`), you may need to pass in the options mentioned above. Example of run outside could be if you like to automate call the scripts from `crontab`.
